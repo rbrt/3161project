@@ -27,7 +27,12 @@ const GLfloat TWINKLE_SPEED = .1f;
 
 typedef GLfloat color4f[4];
 
-int imageWidth, imageHeight;
+int imageWidth,
+	imageHeight;
+
+float moveSpeed = 0.01f,
+	  turningAngle = 0.0f,
+	  turningIncrement = 0;
 
 GLuint thePlane = 0;
 GLuint propeller = 0;
@@ -41,6 +46,8 @@ GLint isMovingUp = 0,
 	  isTurningLeft = 0,
 	  isTurningRight = 0,
 	  isDrawingSolid = 0,
+	  isSpeedingUp = 0,
+	  isSlowingDown = 0,
 	  isShowingFog = 0,
 	  isFullscreen = 0,
 	  isShowingTexture = 0,
@@ -383,7 +390,7 @@ void drawCylinderAndDisk(){
 
 	quadric = gluNewQuadric();
 	
-	gluCylinder(quadric, 200, 200, 300, 100, 100);
+	gluCylinder(quadric, 200, 200, 150, 100, 100);
 	gluDeleteQuadric(quadric);
 	glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
@@ -396,31 +403,26 @@ void drawCylinderAndDisk(){
 void drawPlane() {
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glPushMatrix();
-	planePosition[0] = cameraPosition[0];
-	planePosition[1] = cameraPosition[1];
-	planePosition[2] = cameraPosition[2];
 	glTranslatef(planePosition[0], planePosition[1], planePosition[2]);
+	glRotatef(-turningAngle, 0, 1, 0);
 	glRotatef(270, 0, 1, 0);
+	
+	// barrel roll glRotatef(theta,1,0,0);
 	glCallList(thePlane);
 	
 	glPushMatrix();
+	glTranslatef(0,0,0);
+	glCallList(propeller);
+	glPopMatrix();
+	
 	
 	glPushMatrix();
-	
 	glTranslatef(0, 0, -.7);
-	
 	glCallList(propeller);
 	glPopMatrix();
-
-
-	glPopMatrix();
 	
-	glPushMatrix();
-	glTranslatef(0, 0, 0);
-	glCallList(propeller);
 	glPopMatrix();
 
-	glPopMatrix();
 }
 
 void setUpPlane() {
@@ -529,43 +531,60 @@ void setUpPlane() {
 }
 
 void handleControls(){
-	if(isTurningLeft){
-		//planePosition[0]+=.2;
+	if(isTurningRight){
+		turningAngle+=.1;
+		if (turningAngle > 60){
+			turningAngle = 60;
+		}
 	}
-	else if (isTurningRight){
-		//planePosition[0]-=.2;
+	else if (isTurningLeft){
+		turningAngle-=.1;
+		if (turningAngle < -60){
+			turningAngle = -60;
+		}
 	}
 }
 
 void myDisplay(){
 	int grid = 0;
 	GLfloat position[] = {0, 50.0, 0.0, 1};
-	handleControls();
+	//handleControls();
 
 	glEnable(GL_LINE_SMOOTH | GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
+	turningAngle += turningIncrement;
+
 	glLoadIdentity();
 
-	//cameraPosition[2] -= .5;
+	if (isSpeedingUp){
+		moveSpeed += .01;
+		if (moveSpeed > .3){
+			moveSpeed = .3;
+		}
+	}
+	else if (isSlowingDown){
+		moveSpeed -= .01;
+		if (moveSpeed < 0.01){
+			moveSpeed = 0.01;
+		}
+	}
 
-	if (isTurningRight){
-		cameraPosition[0] += 2;
-		gluLookAt(cameraPosition[0], cameraPosition[1] + 2, cameraPosition[2] + 5,
-				  cameraPosition[0] + 2, cameraPosition[1], cameraPosition[2] - 10,
-				  0, 1, 0);
+	if (isMovingUp){
+		planePosition[1]+=.1;
 	}
-	else if (isTurningLeft){
-		cameraPosition[0] -= 2;
-		gluLookAt(cameraPosition[0], cameraPosition[1] + 2, cameraPosition[2] + 5,
-				  cameraPosition[0] - .2, cameraPosition[1], cameraPosition[2] - 10,
-				  0, 1, 0);
+	else if (isMovingDown){
+		planePosition[1]-=.1;
 	}
-	else {
-		gluLookAt(cameraPosition[0], cameraPosition[1] + 2, cameraPosition[2] + 5,
-				  cameraPosition[0], cameraPosition[1], cameraPosition[2] - 10,
-				  0, 1, 0);
-	}
+	
+	planePosition[0] += sin(turningAngle * 3.1415/180.0f) * moveSpeed;
+	planePosition[2] -= cos(turningAngle * 3.1415/180.0f) * moveSpeed;
+
+
+	gluLookAt(planePosition[0] + sin(turningAngle * (3.1415/180.0f)) * -5, planePosition[1] + 2, planePosition[2] - cos(turningAngle * (3.1415/180.0f)) * -5,
+			  planePosition[0], planePosition[1], planePosition[2],
+			  0, 1, 0);
+	
 
 	glLightfv(GL_LIGHT0, GL_POSITION, position);
 
@@ -585,8 +604,13 @@ void myDisplay(){
 }
 
 void alternateFullscreenAndWindowed(int fullscreen){
-
-
+	if (isFullscreen){
+		glutPositionWindow(0,0);
+        glutReshapeWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
+	}
+	else{
+		glutFullScreen();
+	}
 	isFullscreen = isFullscreen ? 0 : 1;
 }
 
@@ -609,11 +633,11 @@ void keyboardDownFunction(char key, int x, int y){
 
 void specialDownFunction(int key, int x, int y){
 	switch (key){
-		case GLUT_KEY_PAGE_UP: isMovingForward = 1;
+		case GLUT_KEY_PAGE_UP: isSpeedingUp = 1;
 				  break;
 		case GLUT_KEY_LEFT: isTurningLeft = 1;
 				  break;
-		case GLUT_KEY_PAGE_DOWN: isMovingBackward = 1;
+		case GLUT_KEY_PAGE_DOWN: isSlowingDown = 1;
 				  break;
 		case GLUT_KEY_RIGHT: isTurningRight = 1;
 				  break;
@@ -628,11 +652,11 @@ void specialDownFunction(int key, int x, int y){
 
 void specialUpFunction(int key, int x, int y){
 	switch (key){
-		case GLUT_KEY_PAGE_UP: isMovingForward = 0;
+		case GLUT_KEY_PAGE_UP: isSpeedingUp = 0;
 				  break;
 		case GLUT_KEY_LEFT: isTurningLeft = 0;
 				  break;
-		case GLUT_KEY_PAGE_DOWN: isMovingBackward = 0;
+		case GLUT_KEY_PAGE_DOWN: isSlowingDown = 0;
 				  break;
 		case GLUT_KEY_RIGHT: isTurningRight = 0;
 				  break;
@@ -722,6 +746,32 @@ void setUpProp() {
 	fclose (fileStream);
 }
 
+void mouseFunction(int x, int y){
+	int centerCoord;
+
+
+	centerCoord = glutGet(GLUT_WINDOW_WIDTH) / 2;
+
+	if (x < centerCoord){
+		turningIncrement = -(fabsf((centerCoord - x)) * 100 / glutGet(GLUT_WINDOW_WIDTH) / 2) * .0100;
+	}
+	else if (x > centerCoord){
+		turningIncrement = ((fabsf(centerCoord - x)) * 100 / glutGet(GLUT_WINDOW_WIDTH) / 2) * .0100;
+	}
+	else{
+
+	}
+
+}
+
+void resizeFunction(int width, int height){
+	glViewport(0, 0, width, height);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(45, (float)width/(float)height, 1, 1000);
+	glMatrixMode(GL_MODELVIEW);
+}
+
 
 int main(int argc, char *argv[]){
 	GLfloat diffuse[] = {1, 1, 1, 1};
@@ -741,6 +791,8 @@ int main(int argc, char *argv[]){
 	glutKeyboardFunc(keyboardDownFunction);
 	glutSpecialFunc(specialDownFunction);
 	glutSpecialUpFunc(specialUpFunction);
+	glutReshapeFunc(resizeFunction);
+	glutPassiveMotionFunc(mouseFunction);
 
 	glClearColor(0, 0, 0, 1);
 

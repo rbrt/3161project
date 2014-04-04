@@ -1,14 +1,14 @@
 TODO:
 Basic Scene [3]:
-Handle window resize.
-'f' toggles fullscreen and windowed (glutFullScreen and glutReshapeWindow/glutPositionWindow)
+DONE
 
 Plane[6]:
 Propellers spin
 
 Camera Control[5]:
-GLUT_KEY_PAGE_UP: increase speed. page down to decrease.
 GLUT_KEY_UP moves the camera up, down moves the camera down.
+
+mouse steering
 
 
 Lighting[4]:
@@ -41,3 +41,8 @@ Control Dump:
 'w' wireframe/solid
 'f' fullscreen/windowed
 's' toggle grid and sea/sky
+page up: increase speed
+page down: decrease speed
+up arrow: move camera up
+down arrow: move camera down
+mouse: steer plane
