@@ -1,0 +1,12 @@
+TODO:
+Basic Scene [3]:
+Handle window resize.
+'w' toggles wireframe and solid rendering
+'f' toggles fullscreen and windowed (glutFullScreen and glutReshapeWindow/glutPositionWindow)
+'q' quits
+
+Plane[6]:
+Propellers spin
+
+Camera Control[5]:
+GLUT_KEY_PAGE_UP: increase speed. page down to decrease.
