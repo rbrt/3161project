@@ -1,12 +1,43 @@
 TODO:
 Basic Scene [3]:
 Handle window resize.
-'w' toggles wireframe and solid rendering
 'f' toggles fullscreen and windowed (glutFullScreen and glutReshapeWindow/glutPositionWindow)
-'q' quits
 
 Plane[6]:
 Propellers spin
 
 Camera Control[5]:
 GLUT_KEY_PAGE_UP: increase speed. page down to decrease.
+GLUT_KEY_UP moves the camera up, down moves the camera down.
+
+
+Lighting[4]:
+DONE
+
+Sea and Sky[6]:
+DONE
+
+
+Fog[2]:
+DONE
+
+
+Land[8]:
+Procedurally generate mountains
+Toggle mountains with the 'm' key
+Color the mountains
+'t' toggles mountain texture
+Make at least 3 mountains
+
+
+"Additional Crap" [6]
+You made Water,
+You can animate the mountains or something...
+Make the plane do a barrel roll
+DISCO MODE!!!!
+
+Control Dump:
+'b' toggle fog
+'w' wireframe/solid
+'f' fullscreen/windowed
+'s' toggle grid and sea/sky

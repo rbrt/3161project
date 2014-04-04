@@ -1,6 +1,3 @@
-//TODO: Clean out remaining A2 code
-//TODO: Separate faces into component groups and
-//		draw properly
 
 // Ignore compiler warnings
 #define _CRT_SECURE_NO_WARNINGS
@@ -13,9 +10,6 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-
-
-
 
 #define VERTEX_COUNT 6763
 #define FACE_COUNT 3640
@@ -33,7 +27,6 @@ const GLfloat TWINKLE_SPEED = .1f;
 
 typedef GLfloat color4f[4];
 
-int texIDs[] = {0,1};
 int imageWidth, imageHeight;
 
 GLuint thePlane = 0;
@@ -47,11 +40,13 @@ GLint isMovingUp = 0,
 	  isMovingBackward = 0,
 	  isTurningLeft = 0,
 	  isTurningRight = 0,
-	  isShowingShields = 1,
-	  isShowingStars = 1,
-	  isShowingCorona = 1,
-	  isShowingRings = 1,
+	  isDrawingSolid = 0,
+	  isShowingFog = 0,
+	  isFullscreen = 0,
+	  isShowingTexture = 0,
+	  isShowingMountainTexture = 0,
 	  isInDiscoMode = 0,
+
 	  faceCount = 0,
 	  vertexCount = 0,
 	  normalCount = 0;
@@ -60,8 +55,6 @@ GLfloat theta = 0.0;
 
 GLfloat cameraPosition[] = {0,8.5,5};
 GLfloat planePosition[] = {0,7,-2};
-
-GLfloat pointEight = .8f;
 
 color4f yellow = {1.0f,1.0f,0.0f,1.0f};
 color4f black = {0.0f,0.0f,0.0f,1.0f};
@@ -298,7 +291,12 @@ void drawAxis(){
 void drawGrid(){
 	int i, j;
 	glPushMatrix();
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (isDrawingSolid){
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+	else{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
 	glLineWidth(1);
 	
 	glTranslatef(-GRID_SIZE*6.0f, 0.0f, -GRID_SIZE*6.0f);
@@ -330,47 +328,62 @@ void drawGrid(){
 void drawCylinderAndDisk(){
 	GLUquadricObj *quadric;
 	GLfloat fogColor[4] = {1,0,1,1};
-	glMaterialfv(GL_FRONT, GL_EMISSION, white);
-	glEnable(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); 
+	
+
+	if (isDrawingSolid == 0){
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
+
+	if (isDrawingSolid){
+		glMaterialfv(GL_FRONT, GL_EMISSION, white);
+		glEnable(GL_TEXTURE_2D);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); 
+	}
 	glPushMatrix();
 
 	glTranslatef(0, -30, -100);
 	glRotatef(270, 1, 0, 0);
 	glRotatef(theta/2, 0, 0, 1);
 
-	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-    glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-    glEnable(GL_TEXTURE_GEN_S);
-    glEnable(GL_TEXTURE_GEN_T);
+	if (isDrawingSolid){
+		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+		glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+		glEnable(GL_TEXTURE_GEN_S);
+		glEnable(GL_TEXTURE_GEN_T);
+		
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1600, 1200, 0, GL_RGB, GL_UNSIGNED_BYTE, seaTexture);
+	}
 	
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1600, 1200, 0, GL_RGB, GL_UNSIGNED_BYTE, seaTexture);
-
 	quadric = gluNewQuadric();
-	//gluQuadricNormals(quadric, GL_SMOOTH);
 	
+	if (isDrawingSolid){
+		gluQuadricTexture(quadric, GL_TRUE);
+	}
 	
-	gluQuadricTexture(quadric, GL_TRUE);
-	glEnable(GL_FOG);
-	glFogfv(GL_FOG_COLOR, fogColor);
-	glFogf(GL_FOG_MODE, GL_EXP);
-	glFogf(GL_FOG_DENSITY, 0.002);
+	if (isShowingFog){
+		glEnable(GL_FOG);
+		glFogfv(GL_FOG_COLOR, fogColor);
+		glFogf(GL_FOG_MODE, GL_EXP);
+		glFogf(GL_FOG_DENSITY, 0.002);
+	}
 	
 	gluDisk(quadric, .1, 300, 20, 20);
 
-	glDisable(GL_FOG);
+	if (isShowingFog){
+		glDisable(GL_FOG);
+	}
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 896, 385, 0, GL_RGB, GL_UNSIGNED_BYTE, skyTexture);
+	if (isDrawingSolid){
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 896, 385, 0, GL_RGB, GL_UNSIGNED_BYTE, skyTexture);
+	}
 	
 
 	quadric = gluNewQuadric();
 	
-	gluCylinder(quadric, 200, 200, 400, 200, 200);
+	gluCylinder(quadric, 200, 200, 300, 100, 100);
 	gluDeleteQuadric(quadric);
 	glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
@@ -379,19 +392,6 @@ void drawCylinderAndDisk(){
 	
 }
 
-
-void drawSea(){
-	
-
-
-
-
-	// draw sea here
-
-
-
-	
-}
 
 void drawPlane() {
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -547,7 +547,7 @@ void myDisplay(){
 	
 	glLoadIdentity();
 
-	cameraPosition[2] -= .5;
+	//cameraPosition[2] -= .5;
 
 	if (isTurningRight){
 		cameraPosition[0] += 2;
@@ -573,31 +573,36 @@ void myDisplay(){
 	
 	drawPlane();
 
-	drawAxis();
-	
-	if (grid){
-		drawGrid();
-	}
-	else{
+	if (isShowingTexture){
 		drawCylinderAndDisk();
 	}
-	drawSea();
-
+	else{
+		drawAxis();
+		drawGrid();
+	}
+	
 	glutSwapBuffers();
+}
+
+void alternateFullscreenAndWindowed(int fullscreen){
+
+
+	isFullscreen = isFullscreen ? 0 : 1;
 }
 
 void keyboardDownFunction(char key, int x, int y){
 	switch (key){
 		case 'd': isInDiscoMode = isInDiscoMode ? 0 : 1;
 				  break;
-		case 'r': isShowingRings = isShowingRings ? 0 : 1;
+		case 'w': isDrawingSolid = isDrawingSolid ? 0 : 1;
 				  break;
-		case 's': isShowingStars = isShowingStars ? 0 : 1;
+		case 'f': alternateFullscreenAndWindowed(isFullscreen);
 				  break;
-		case 'c': isShowingCorona = isShowingCorona ? 0 : 1;
-				  break;			  
-		case 'k': isShowingShields = isShowingShields ? 0 : 1;
+		case 'q': exit(1);
 				  break;
+		case 's': isShowingTexture = isShowingTexture ? 0 : 1;
+				  break;
+		case 'b': isShowingFog = isShowingFog ? 0 : 1;
 		default: break;
 	}
 }
