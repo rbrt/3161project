@@ -2,9 +2,15 @@
 // Ignore compiler warnings
 #define _CRT_SECURE_NO_WARNINGS
 
+#ifdef OS_WINDOWS
 #include <GL/freeglut.h>
 #include <GL/gl.h>
 #include <GL/glut.h>
+#else
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#include <GLUT/glut.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,7 +38,9 @@ int imageWidth,
 
 float moveSpeed = 0.01f,
 	  turningAngle = 0.0f,
-	  turningIncrement = 0;
+	  turningIncrement = 0,
+	  currentPlaneAngle = 0,
+	  planeTilt = 0;
 
 GLuint thePlane = 0;
 GLuint propeller = 0;
@@ -206,84 +214,34 @@ void loadTexture(){
 
 }
 
-void moveShip(){
-	if (isMovingForward == 1){
-		cameraLerp(&cameraPosition[2], 0);
-	}
-	if (isMovingBackward == 1){
-		cameraLerp(&cameraPosition[2], 1);
-	}
-	if (isMovingLeft == 1){
-		cameraLerp(&cameraPosition[0], 0);
-	}
-	if (isMovingRight == 1){
-		cameraLerp(&cameraPosition[0], 1);
-	}
-	if (isMovingUp == 1){
-		cameraLerp(&cameraPosition[1], 0);
-	}
-	if (isMovingDown == 1){
-		cameraLerp(&cameraPosition[1], 1);
-	}
-}
-
-int getColorIndex(groupNumber){
-	int colorIndex = 0;
-	if (groupNumber < 4){
-
-	}
-	else if (groupNumber < 6){
-		colorIndex = 1;
-	}
-	else if (groupNumber < 7){
-		colorIndex = 2;
-	}
-	else if (groupNumber < 8){
-		colorIndex = 3;
-	}
-	else if (groupNumber < 11){
-		colorIndex = 4;
-	}
-	else if (groupNumber < 12){
-		colorIndex = 5;
-	}
-	else if (groupNumber < 14){
-		colorIndex = 6;
-	}
-	else if (groupNumber < 26){
-		colorIndex = 7;
-	}
-	else {
-		colorIndex = 8;
-	}
-	return colorIndex;
-}
-
 void drawAxis(){
 	GLUquadricObj *quadric;
 
 	glTranslatef(0,0,-50);
 	glLineWidth(2);
+	
 	glBegin(GL_LINES);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, red);
-		glMaterialfv(GL_FRONT, GL_AMBIENT, red);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, red);
-		glVertex3f(0,0,0);
-		glVertex3f(5,0,0);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, red);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, red);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, red);
+	glVertex3f(0,0,0);
+	glVertex3f(5,0,0);
 	glEnd();
+	
 	glBegin(GL_LINES);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, green);
-		glMaterialfv(GL_FRONT, GL_AMBIENT, green);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, green);
-		glVertex3f(0,0,0);
-		glVertex3f(0,5,0);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, green);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, green);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, green);
+	glVertex3f(0,0,0);
+	glVertex3f(0,5,0);
 	glEnd();
+	
 	glBegin(GL_LINES);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, blue);
-		glMaterialfv(GL_FRONT, GL_AMBIENT, blue);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, blue);
-		glVertex3f(0,0,0);
-		glVertex3f(0,0,5);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, blue);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, blue);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, blue);
+	glVertex3f(0,0,0);
+	glVertex3f(0,0,5);
 	glEnd();
 
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, grey);
@@ -399,7 +357,6 @@ void drawCylinderAndDisk(){
 	
 }
 
-
 void drawPlane() {
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glPushMatrix();
@@ -407,6 +364,36 @@ void drawPlane() {
 	glRotatef(-turningAngle, 0, 1, 0);
 	glRotatef(270, 0, 1, 0);
 	
+	float rotation = (currentPlaneAngle * 100 / glutGet(GLUT_WINDOW_WIDTH) * .6) - 30;
+	if (rotation <= 30 && rotation >= -30){
+		glRotatef(-rotation , 1, 0, 0);
+		
+	}
+	else if (rotation > 30){
+		glRotatef(-30, 1, 0, 0);
+	}
+	else if (rotation < -30){
+		glRotatef(30, 1, 0, 0);
+	}
+
+	if (isMovingUp){
+		if (planeTilt > -15){
+			planeTilt = lerp(planeTilt, -15, .2);
+			glRotatef(planeTilt, 0, 0, 1);
+		}
+	}
+	else if (isMovingDown){
+		if (planeTilt < 15){
+			planeTilt = lerp(planeTilt, 15, .2);
+			glRotatef(planeTilt, 0, 0, 1);
+		}
+	}
+	else{
+		planeTilt = lerp(planeTilt, 0.1f, .2);
+		glRotatef(planeTilt, 0, 0, 1);
+	}
+	
+	printf("rot:%f tilt:%f\n", rotation, planeTilt);
 	// barrel roll glRotatef(theta,1,0,0);
 	glCallList(thePlane);
 	
@@ -749,7 +736,7 @@ void setUpProp() {
 void mouseFunction(int x, int y){
 	int centerCoord;
 
-
+	currentPlaneAngle = x;
 	centerCoord = glutGet(GLUT_WINDOW_WIDTH) / 2;
 
 	if (x < centerCoord){

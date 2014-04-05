@@ -6,10 +6,7 @@ Plane[6]:
 Propellers spin
 
 Camera Control[5]:
-GLUT_KEY_UP moves the camera up, down moves the camera down.
-
-mouse steering
-
+DONE
 
 Lighting[4]:
 DONE
@@ -31,7 +28,10 @@ Make at least 3 mountains
 
 
 "Additional Crap" [6]
-You made Water,
+You made Water all cool
+You made the plane tilt up and down when you move up and down
+
+
 You can animate the mountains or something...
 Make the plane do a barrel roll
 DISCO MODE!!!!

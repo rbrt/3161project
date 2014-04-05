@@ -2,6 +2,8 @@
 ## Eclipse
 #################
 
+*gitignore
+
 *.pydevproject
 .project
 .metadata
@@ -15,6 +17,8 @@ local.properties
 .classpath
 .settings/
 .loadpath
+
+.gitignore
 
 # External tool builders
 .externalToolBuilders/
@@ -127,6 +131,11 @@ publish/
 # Publish Web Output
 *.Publish.xml
 *.pubxml
+
+
+makefile
+output
+gitignore
 
 # NuGet Packages Directory
 ## TODO: If you have NuGet Package Restore enabled, uncomment the next line
