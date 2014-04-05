@@ -1,49 +1,47 @@
-
-// Ignore compiler warnings
 #define _CRT_SECURE_NO_WARNINGS
-
-#ifdef OS_WINDOWS
 #include <GL/freeglut.h>
 #include <GL/gl.h>
 #include <GL/glut.h>
-#else
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
 
+//Necessary defines
 #define VERTEX_COUNT 6763
 #define FACE_COUNT 3640
 #define PROP_FACE_COUNT 132
 #define MOUNTAIN_MESH_DENSITY 21
 #define MOUNTAIN_COUNT 4
 
+// Set up constants
 const GLint WINDOW_WIDTH = 800;
 const GLint WINDOW_HEIGHT = 600;
 const GLint GRID_SIZE = 5;
 
+// New type to hold color information
 typedef GLfloat color4f[4];
 
+// For laoding textures
 int imageWidth,
 	imageHeight;
 
+// The heightmaps for each mountain
 GLfloat heightMap[MOUNTAIN_COUNT][MOUNTAIN_MESH_DENSITY][MOUNTAIN_MESH_DENSITY];
 
-float moveSpeed = 0.01f,
-	  turningAngle = 0.0f,
-	  turningIncrement = 0,
-	  currentPlaneAngle = 0,
-	  planeTilt = 0,
+float moveSpeed = 0.01f,	// how fast the plane is moving
+	  turningAngle = 0.0f,	// The angle at which the plane is turning
+	  turningIncrement = 0,	// the amount turning angle has been incremented
+	  currentPlaneAngle = 0,// the current angle of the plane
+	  planeTilt = 0,		// How much to tilt the plane
 	  groundHeight = -10;
 
-GLuint thePlane = 0;
-GLuint propeller = 0;
+// Display lists for the plane and propellers
+GLuint planeDisplayList = 0;
+GLuint propellerDisplayList = 0;
 
+// Flag variables which determine whether or not to display certain features
 GLint isMovingUp = 0,
 	  isMovingDown = 0,
 	  isMovingLeft = 0,
@@ -61,17 +59,16 @@ GLint isMovingUp = 0,
 	  isShowingTexture = 0,
 	  isShowingMountainTexture = 0,
 	  isShowingMountains = 0,
-	  isInDiscoMode = 0,
+	  isInDiscoMode = 0;
 
-	  faceCount = 0,
-	  vertexCount = 0,
-	  normalCount = 0;
-
+// How much change has occured
 GLfloat theta = 0.0;
 
+// The positon of the plane and camera to start
 GLfloat cameraPosition[] = {0,8.5,5};
 GLfloat planePosition[] = {0,7,-2};
 
+// color definitions 
 color4f yellow = {1.0f,1.0f,0.0f,1.0f};
 color4f black = {0.0f,0.0f,0.0f,1.0f};
 color4f blue = {0.0f,0.0f,1.0f,1.0f};
@@ -82,22 +79,26 @@ color4f white = {1.0f,1.0f,1.0f,1.0f};
 color4f orange = {1.0f,.7f,0.0f,1.0f};
 color4f green = {0.0f,1.0f,0.0f,1.0f};
 
+// The sea, sky, and mountain textures as arrays of unsigned bytes
 GLubyte *seaTexture;
 GLubyte *skyTexture;
 GLubyte *mountainTexture;
 
+// struct which holds 3 floats
 typedef struct vector3f {
 	GLfloat x;
 	GLfloat y;
 	GLfloat z;
 };
 
+//struct which holds 3 ints
 typedef struct vector3i {
 	GLint x;
 	GLint y;
 	GLint z;
 };
 
+// struct which holds 4 ints
 typedef struct vector4i {
 	GLint x;
 	GLint y;
@@ -105,24 +106,24 @@ typedef struct vector4i {
 	GLint w;
 };
 
-typedef struct faceContainer {
-	GLint groupNumber;
-	GLint elementCount;
-	GLint elements[30];
-};
-
+// vertices and normals for the plane and propeller
 struct vector3f modelVertices[VERTEX_COUNT];
 struct vector3f modelNormals[VERTEX_COUNT];
-struct faceContainer modelFaces[FACE_COUNT];
 struct vector3f propellerVertices[VERTEX_COUNT];
 struct vector3f propellerNormals[VERTEX_COUNT];
-struct faceContainer propellerFaces[FACE_COUNT];
 
+// Returns log base 2 of a number, since log2 is not part fo standard c math implementation
+double log2( double n )  
+{  
+    return log( n ) / log( 2 );  
+}
 
+// linear interpolation function
 GLfloat lerp(GLfloat a, GLfloat b, GLfloat time){
 	return a + (b - a) * time;
 }
 
+// linear interpolation on camera function
 void cameraLerp(GLfloat *position, int plus){
 	if (plus){
 		*position = lerp(*position, *position + 1, .75);
@@ -203,6 +204,7 @@ GLubyte *loadImage(char* filename){
 	return imageData;
 }
 
+// Function to load all three textures required for the scene
 void loadTexture(){
 	
 	seaTexture = loadImage("texturesPPM/sea02.ppm");
@@ -215,12 +217,15 @@ void loadTexture(){
 
 }
 
+// Draws the three axis lines and the grey sphere at the center
 void drawAxis(){
 	GLUquadricObj *quadric;
 
+	// Place it in front of the camera
 	glTranslatef(0,0,-50);
 	glLineWidth(2);
 	
+	// Draw the red x line
 	glBegin(GL_LINES);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, red);
 	glMaterialfv(GL_FRONT, GL_AMBIENT, red);
@@ -229,6 +234,7 @@ void drawAxis(){
 	glVertex3f(5,0,0);
 	glEnd();
 	
+	// draw the green y line
 	glBegin(GL_LINES);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, green);
 	glMaterialfv(GL_FRONT, GL_AMBIENT, green);
@@ -237,6 +243,7 @@ void drawAxis(){
 	glVertex3f(0,5,0);
 	glEnd();
 	
+	// draw the blue z line
 	glBegin(GL_LINES);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, blue);
 	glMaterialfv(GL_FRONT, GL_AMBIENT, blue);
@@ -245,26 +252,32 @@ void drawAxis(){
 	glVertex3f(0,0,5);
 	glEnd();
 
+	// Set the material for the sphere
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, grey);
 	glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, grey);
 	
+	// Draw the sphere
 	quadric = gluNewQuadric();
 	gluSphere(quadric, .5, 10, 10);
 	gluDeleteQuadric(quadric);
 }
 
-
+// Function to alter a height map. Allows for different values for each mountain to be randomly 
+// generated each time
 void alterHeightMap(int mid, float alteration, int mapIndex){
 	int i = 0,
 		j = 0,
+		k = 0,
 		debug = 0;
 
 	GLint density = MOUNTAIN_MESH_DENSITY;
+	srand(glutGet(GLUT_ELAPSED_TIME));
 
+	// print out info if we are debugging
 	if (debug){
 		for (i = 0; i < density; i++){
-			for (int k = 0; k < density; k++){
+			for (k = 0; k < density; k++){
 				printf("%1.2f ", heightMap[mapIndex][i][k]);
 			}
 			printf("\n");
@@ -273,29 +286,30 @@ void alterHeightMap(int mid, float alteration, int mapIndex){
 		printf("---------------\n");
 	}
 	
+	// apply the alteration to a row of cooridinates on the mountain
 	// left side
 	for (j = 0; j < density - 2*mid; j++){
-		heightMap[mapIndex][mid][mid + j] += sin(j)*.5*alteration;
+		heightMap[mapIndex][mid][mid + j] += sin(j)*((rand()%10) / 10.0)*alteration;
 	}
 
 	// far side
 	for (j = 1; j < density - 2*mid; j++){
-		heightMap[mapIndex][mid + j][mid] += sin(j)*.7*alteration;
+		heightMap[mapIndex][mid + j][mid] += sin(j)*((rand()%10) / 10.0)*alteration;
 	}
 
 	// right side
 	for (j = 1; j < density - 2*mid; j++){
-		heightMap[mapIndex][density-mid-1][mid + j] += cos(j)*.8*alteration;
+		heightMap[mapIndex][density-mid-1][mid + j] += cos(j)*((rand()%10) / 10.0)*alteration;
 	}
 
 	// close side
 	for (j = 1; j < density - 2*mid-1; j++){
-		heightMap[mapIndex][mid + j][density-mid-1] += sin(j)*.8*alteration;
+		heightMap[mapIndex][mid + j][density-mid-1] += sin(j)*((rand()%10) / 10.0)*alteration;
 	}
 
 	if (debug){
 		for (i = 0; i < density; i++){
-			for (int k = 0; k < density; k++){
+			for (k = 0; k < density; k++){
 				printf("%1.2f ", heightMap[mapIndex][i][k]);
 			}
 			printf("\n");
@@ -303,28 +317,40 @@ void alterHeightMap(int mid, float alteration, int mapIndex){
 	}
 }
 
+// Fucntion to recursively alter the heights of a mountain by dividing it in two, and continuing to do so
+// until several levels of recursion have occurred and the mountain has been suitably altered.
 void recursivelyDivideMountains(int division, int mapIndex){
 	if (division <= 0 ){
 		return;
 	}
 	else{
+		// Calculate row to deform, then deform each row
 		int index = MOUNTAIN_MESH_DENSITY / division;
 		alterHeightMap(index, division, mapIndex);
 		alterHeightMap(division, division, mapIndex);
 	}
-	recursivelyDivideMountains(division-1, mapIndex);
 
+	// Call self
+	recursivelyDivideMountains(division-1, mapIndex);
 }
 
+
+// Function to initialize each mountain
 void initMountains(){
 	int k = 0,
 		i = 0,
 		j = 0,
 		density = MOUNTAIN_MESH_DENSITY;
+
+	// Calculate the number of division by getting the log base 2 of density
+	GLint divisions = (int)floor(log2(density));
+
+	//Initialize each mountain with a different seed for rand()
 	for (k = 0; k < MOUNTAIN_COUNT; k++){
-		srand(glutGet(GLUT_ELAPSED_TIME));
 		for (i = 0; i < density; i++){
 			for (j = 0; j < density; j++){
+				// Creates a default height map for each mountain in the shape of a pyramid, 
+				//which is later deformed with the recursive alteration function
 				if (j > density / 2){
 					heightMap[k][i][j] = density - j - 1;	
 				}
@@ -345,20 +371,20 @@ void initMountains(){
 			}
 		}
 
+		// Always make the middle point large
 		heightMap[k][i][j] *= 1.5;
 
-		GLint randomBase = 10;
-		
-		GLint offset = density / 2;
-		GLint offsetInc = density / 2;
-		
-		GLint divisions = (int)floor(log2(density));
+		// Commence altering each height map
 		recursivelyDivideMountains(divisions, k);
 	}
 }
 
+// Function to draw each mountain
 void drawMountains(){
 	int i, j, m;
+	GLfloat spacing = 1;
+	GLint density = MOUNTAIN_MESH_DENSITY;
+
 	glPushMatrix();
 	if (isDrawingSolid){
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -368,9 +394,7 @@ void drawMountains(){
 	}
 	glLineWidth(1);
 	
-	GLfloat spacing = 1;
-	GLint density = MOUNTAIN_MESH_DENSITY;
-	
+
 	glTranslatef(-10, groundHeight, - 20);
 	glScalef(1,1,1);
 	
@@ -404,12 +428,13 @@ void drawMountains(){
 		for (i = 0; i < density-1; i++){
 			for (j = 0; j < density-1; j++){
 				color4f mountainWhite;
+				color4f mountainGreen;
 				mountainWhite[0] = (heightMap[m][i][j] / (.6 * density/2));
 				mountainWhite[1] = (heightMap[m][i][j]  / (.6 * density/2));
 				mountainWhite[2] = (heightMap[m][i][j]  / (.6 * density/2));
 				mountainWhite[3] = 1;
 
-				color4f mountainGreen;
+				
 				mountainGreen[0] = 0;
 				mountainGreen[1] = (heightMap[m][i][j] / (.6 * density/2));
 				mountainGreen[2] = 0;
@@ -638,13 +663,13 @@ void drawCylinderAndDisk(){
 }
 
 void drawPlane() {
+	float rotation = (currentPlaneAngle * 100 / glutGet(GLUT_WINDOW_WIDTH) * .6) - 30;
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glPushMatrix();
 	glTranslatef(planePosition[0], planePosition[1], planePosition[2]);
 	glRotatef(-turningAngle, 0, 1, 0);
 	glRotatef(270, 0, 1, 0);
 	
-	float rotation = (currentPlaneAngle * 100 / glutGet(GLUT_WINDOW_WIDTH) * .6) - 30;
 	if (rotation <= 30 && rotation >= -30){
 		glRotatef(-rotation , 1, 0, 0);
 		
@@ -676,17 +701,17 @@ void drawPlane() {
 	if (isBarrelRolling){
 		glRotatef(theta*15,1,0,0);
 	}
-	glCallList(thePlane);
+	glCallList(planeDisplayList);
 	
 	glPushMatrix();
 	glTranslatef(0,0,0);
-	glCallList(propeller);
+	glCallList(propellerDisplayList);
 	glPopMatrix();
 	
 	
 	glPushMatrix();
 	glTranslatef(0, 0, -.7);
-	glCallList(propeller);
+	glCallList(propellerDisplayList);
 	glPopMatrix();
 	
 	glPopMatrix();
@@ -709,8 +734,8 @@ void setUpPlane() {
 
 	if (fileStream != NULL)
 	{
-		thePlane = glGenLists(1);
-	  	glNewList(thePlane, GL_COMPILE);
+		planeDisplayList = glGenLists(1);
+	  	glNewList(planeDisplayList, GL_COMPILE);
 
 		while(fgets(string, 100, fileStream) != NULL)
 		{
@@ -954,8 +979,8 @@ void setUpProp() {
 
 	if (fileStream != NULL)
 	{
-		propeller = glGenLists(1);
-	  	glNewList(propeller, GL_COMPILE);
+		propellerDisplayList = glGenLists(1);
+	  	glNewList(propellerDisplayList, GL_COMPILE);
 
 		while(fgets(string, 100, fileStream) != NULL)
 		{
