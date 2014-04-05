@@ -28,6 +28,7 @@ const GLint PLANET_OFFSET = 10;
 const GLint SUN_SIZE = 20;
 const GLint STAR_COUNT = 3000;
 const GLint GRID_SIZE = 5;
+const GLint MOUNTAIN_MESH_DENSITY = 20;
 
 const GLfloat TWINKLE_SPEED = .1f;
 
@@ -254,6 +255,110 @@ void drawAxis(){
 	gluDeleteQuadric(quadric);
 }
 
+int hasGenerated = 0;
+GLfloat heightMap[MOUNTAIN_MESH_DENSITY][MOUNTAIN_MESH_DENSITY]; 
+
+void drawMountains(){
+	int i, j;
+	glPushMatrix();
+	//if (isDrawingSolid){
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//}
+	//else{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//}
+	glLineWidth(1);
+	
+	GLfloat spacing = 1;
+	GLint density = MOUNTAIN_MESH_DENSITY;
+	GLint maxHeight = 2*density;
+	GLint currentHeight = 1;
+	//glTranslatef(-spacing * 1.0f, 5.0f, -density*spacing);
+
+	if (hasGenerated == 0){
+
+		for (i = 0; i < density; i++){
+			for (j = 0; j < density; j++){
+				if (j > density / 2){
+					heightMap[i][j] = density - j - 1;	
+				}
+				else{
+					heightMap[i][j] = j;
+				}
+				if (i < density / 2){
+					if (heightMap[i][j] > i){
+						heightMap[i][j] = i;
+					}
+				}
+				else{
+					if (heightMap[i][j] > density - i - 1){
+						heightMap[i][j] = density - i - 1;
+					}	
+				}
+				
+			}
+		}
+		
+		/*
+		GLint randomHeight = rand() % maxHeight;
+		for (i = density/2; i < density; i++){
+			currentHeight = maxHeight;
+			for (j = density/2; j < density; j++){
+				heightMap[i][j] = maxHeight - rand() % currentHeight;
+				currentHeight *= 2;
+			}
+			currentHeight = maxHeight;
+			for (j = density/2 - 1; j >= 0; j--){
+				heightMap[i][j] =  maxHeight - rand() % currentHeight;
+				currentHeight *= 2;
+			}
+		}
+		for (i = density/2 - 1; i >= 0; i--){
+			currentHeight = maxHeight;
+			for (j = density/2; j < density; j++){
+				heightMap[i][j] = maxHeight - rand() % currentHeight;
+				currentHeight *= 2;
+			}
+			currentHeight = maxHeight;
+			for (j = density/2 - 1; j >= 0; j--){
+				heightMap[i][j] = maxHeight - rand() % currentHeight;
+				currentHeight *= 2;
+			}
+		}
+		*/
+		hasGenerated = 1;
+	}
+
+	glTranslatef(0,0,-20);
+	
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, green);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, green);
+	glBegin(GL_QUADS);
+	
+
+
+	for (i = 0; i < density-1; i++){
+		for (j = 0; j < density-1; j++){
+			
+			glNormal3f(i,heightMap[i][j],j);
+			glVertex3f(i,heightMap[i][j],j);
+			
+			glNormal3f(i,heightMap[i][j+1],j+1);
+			glVertex3f(i,heightMap[i][j+1],j+1);
+
+			glVertex3f(i+1,heightMap[i+1][j+1],j+1);
+			glNormal3f(i+1,heightMap[i+1][j+1],j+1);
+
+			glNormal3f(i+1,heightMap[i+1][j],j);
+			glVertex3f(i+1,heightMap[i+1][j],j);
+
+		}
+	}
+	glEnd();
+	glPopMatrix();
+}
+
+
 void drawGrid(){
 	int i, j;
 	glPushMatrix();
@@ -394,7 +499,6 @@ void drawPlane() {
 		glRotatef(planeTilt, 0, 0, 1);
 	}
 	
-	printf("rot:%f tilt:%f\n", rotation, planeTilt);
 	if (isBarrelRolling){
 		glRotatef(theta*15,1,0,0);
 	}
@@ -582,12 +686,14 @@ void myDisplay(){
 	
 	drawPlane();
 
+	drawMountains();
+
 	if (isShowingTexture){
 		drawCylinderAndDisk();
 	}
 	else{
-		drawAxis();
-		drawGrid();
+		//drawAxis();
+		//drawGrid();
 	}
 	
 	glutSwapBuffers();
