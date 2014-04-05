@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <GL/freeglut.h>
 #include <GL/gl.h>
-#include <GL/glut.h>
+//#include <GL/glut.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -764,109 +764,176 @@ void drawPlane() {
 	glPopMatrix();
 }
 
-void setUpPlane() {
-	int i = 0;
-	int j = 0;
+// Function to load the plane from a file into a display list
+void loadPlane() {
+	// Initialize counters and buffers for reading file
+	int vertexCount = 0;
+	int normalCount = 0;
 	int groupingCount = -1;
 	int isFace = 0;
-	char firstChar;
+	char first;
 	char *token;
 
-	// Set up a file
-	FILE * fileStream;
-	// Char array to store
-	char string[200];
-	fileStream = fopen("cessna.txt", "rt");
+	FILE *file;
+	char buffer[180];
+	file = fopen("cessna.txt", "r");
 
-	if (fileStream != NULL)
+	if (file != NULL)
 	{
+		// Create a new display list
 		planeDisplayList = glGenLists(1);
 	  	glNewList(planeDisplayList, GL_COMPILE);
-
-		while(fgets(string, 100, fileStream) != NULL)
-		{
-			firstChar = ' ';
-			if(sscanf(string, "v %f %f %f ", &modelVertices[i].x, &modelVertices[i].y, &modelVertices[i].z) == 3) {
-				i++;
+		while(fgets(buffer, 180, file) != NULL){
+			first = ' ';
+			// Read vertices
+			if(sscanf(buffer, "v %f %f %f ", &modelVertices[vertexCount].x, &modelVertices[vertexCount].y, &modelVertices[vertexCount].z) == 3) {
+				vertexCount++;
 			} 
-			else if(sscanf(string, "n %f %f %f ", &modelNormals[j].x, &modelNormals[j].y, &modelNormals[j].z) == 3) {
-				j++;
+			// Read normals
+			else if(sscanf(buffer, "n %f %f %f ", &modelNormals[normalCount].x, &modelNormals[normalCount].y, &modelNormals[normalCount].z) == 3) {
+				normalCount++;
 			} 
-			else if(sscanf(string, "%c", &firstChar) == 1) { 
-				if(firstChar == 'f') {
-					token = strtok(string, " ");
+			// Read faces and add to display list
+			else if(sscanf(buffer, "%c", &first) == 1) { 
+				if(first == 'f') {
+					// Tokenize string and advance tokens
+					token = strtok(buffer, " ");
 					token = strtok(NULL, " ");
 					glBegin(GL_POLYGON);
 						glLineWidth(1);
 						while(token != NULL && token[0] != 10) {
-							
 							glMaterialf(GL_FRONT, GL_SHININESS, 100.0);
-							if(groupingCount <= 3) {
+							// Set the colour according to the spec in the assignment
+							if(groupingCount < 4) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, yellow);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							}
-							else if(groupingCount <= 5) {
+							else if(groupingCount < 6) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, black);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							} 
-							else if(groupingCount <= 6) {
+							else if(groupingCount < 7) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, purple);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							} 
-							else if(groupingCount <= 7) {
+							else if(groupingCount < 8) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, blue);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							} 
-							else if(groupingCount <= 10) {
+							else if(groupingCount < 11) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, yellow);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							} 
-							else if(groupingCount <= 11) {
+							else if(groupingCount < 12) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, black);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							} 
-							else if(groupingCount <= 13) {
+							else if(groupingCount < 14) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, yellow);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							} 
-							else if(groupingCount <= 25) {
+							else if(groupingCount < 26) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, blue);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							} 
-							else if(groupingCount <= 32) {
+							else if(groupingCount < 33) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, yellow);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							} 
 							else {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, blue);
 								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
 							}
+							// Set normals and vertices, subtracting one because otherwise
+							// the model looks all janky and weird
 							glNormal3f(modelNormals[atoi(token)-1].x, modelNormals[atoi(token)-1].y, modelNormals[atoi(token)-1].z);
 							glVertex3f(modelVertices[atoi(token)-1].x, modelVertices[atoi(token)-1].y, modelVertices[atoi(token)-1].z);
 							token = strtok(NULL, " ");
 						}
 					glEnd();
 				} 
-				else if (firstChar == 'g') {
-					// Increase object count
+				// Advance when we are drawing a new component of the plane
+				else if (first == 'g') {
 					groupingCount++;
 				}
 			}
 		}
-		// End the display list
 		glEndList();
 	}
-	fclose (fileStream);
+	fclose (file);
+}
+
+// A function to load the propellers from a file and create a display list
+void loadPropellers() {
+	int vertexCount = 0;
+	int normalCount = 0;
+	int groupingCount = -1;
+	int isFace = 0;
+	char first;
+	char *token;
+
+	FILE *file;
+	
+	char buffer[180];
+	file = fopen("propeller.txt", "r");
+
+	if (file != NULL)
+	{
+		propellerDisplayList = glGenLists(1);
+	  	glNewList(propellerDisplayList, GL_COMPILE);
+
+		while(fgets(buffer, 180, file) != NULL)
+		{
+			first = ' ';
+			if(sscanf(buffer, "v %f %f %f ", &propellerVertices[vertexCount].x, &propellerVertices[vertexCount].y, &propellerVertices[vertexCount].z) == 3) {
+				vertexCount++;
+			} 
+			else if(sscanf(buffer, "n %f %f %f ", &propellerNormals[normalCount].x, &propellerNormals[normalCount].y, &propellerNormals[normalCount].z) == 3) {
+				normalCount++;
+			} 
+			else if(sscanf(buffer, "%c", &first) == 1) {
+				if(first == 'f') {
+					token = strtok(buffer, " ");
+					token = strtok(NULL, " ");
+
+					glBegin(GL_POLYGON);
+						glLineWidth(1);
+						while(token != NULL && token[0] != 10) {
+							glMaterialf(GL_FRONT, GL_SHININESS, 100.0f);
+							if(groupingCount <= 0) {
+								glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, orange);
+							} else if(groupingCount <= 1) {
+								glMaterialfv(GL_FRONT, GL_DIFFUSE, red);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, red);
+							} else {
+								glMaterialfv(GL_FRONT, GL_DIFFUSE, yellow);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, yellow);
+							}
+							glNormal3f(propellerNormals[atoi(token)-1].x, propellerNormals[atoi(token)-1].y, propellerNormals[atoi(token)-1].z);
+							glVertex3f(propellerVertices[atoi(token)-1].x, propellerVertices[atoi(token)-1].y, propellerVertices[atoi(token)-1].z);
+							token = strtok(NULL, " ");
+						}
+					glEnd();
+				} 
+				else if (first == 'g') {
+					groupingCount++;
+				}
+			}
+		}
+		glEndList();
+	}
+	fclose (file);
 }
 
 void myDisplay(){
@@ -1010,76 +1077,6 @@ void timerFunction(){
 	glutTimerFunc(5, timerFunction, 0);
 }
 
-void setUpProp() {
-	int i = 0;
-	int j = 0;
-	int groupingCount = -1;
-	int isFace = 0;
-	char firstChar;
-	char *token;
-
-	FILE *fileStream;
-	
-	char string[100];
-	fileStream = fopen("propeller.txt", "rt");
-
-	if (fileStream != NULL)
-	{
-		propellerDisplayList = glGenLists(1);
-	  	glNewList(propellerDisplayList, GL_COMPILE);
-
-		while(fgets(string, 100, fileStream) != NULL)
-		{
-			firstChar = ' ';
-			if(sscanf(string, "v %f %f %f ", &propellerVertices[i].x, &propellerVertices[i].y, &propellerVertices[i].z) == 3) {
-				i++;
-			} 
-			else if(sscanf(string, "n %f %f %f ", &propellerNormals[j].x, &propellerNormals[j].y, &propellerNormals[j].z) == 3) {
-				j++;
-			} 
-			else if(sscanf(string, "%c", &firstChar) == 1) {
-				if(firstChar == 'f') {
-					// Check for faces
-					token = strtok(string, " ");
-					// Get next token
-					token = strtok(NULL, " ");
-
-					// Draw polygon for this face
-					glBegin(GL_POLYGON);
-						glLineWidth(1);
-						while(token != NULL && token[0] != 10) {
-							// Draw the normal and point
-							glMaterialf(GL_FRONT, GL_SHININESS, 100.0f);
-							if(groupingCount <= 0) {
-								glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, orange);
-							} else if(groupingCount <= 1) {
-								glMaterialfv(GL_FRONT, GL_DIFFUSE, red);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, red);
-							} else {
-								glMaterialfv(GL_FRONT, GL_DIFFUSE, yellow);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, yellow);
-							}
-							// Get normal and draw color
-							glNormal3f(propellerNormals[atoi(token)-1].x, propellerNormals[atoi(token)-1].y, propellerNormals[atoi(token)-1].z);
-							glVertex3f(propellerVertices[atoi(token)-1].x, propellerVertices[atoi(token)-1].y, propellerVertices[atoi(token)-1].z);
-							// Get next token
-							token = strtok(NULL, " ");
-						}
-					glEnd(); // End drawing of polygon
-				} 
-				else if (firstChar == 'g') {
-					// Increase object count
-					groupingCount++;
-				}
-			}
-		}
-		// End the display list
-		glEndList();
-	}
-	fclose (fileStream);
-}
-
 void mouseFunction(int x, int y){
 	int centerCoord;
 
@@ -1167,8 +1164,8 @@ int main(int argc, char *argv[]){
 	
 
 	glLightfv(GL_LIGHT0, GL_POSITION, position);
-	setUpPlane();
-	setUpProp();
+	loadPlane();
+	loadPropellers();
 
 	initMountains();
 
