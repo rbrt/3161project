@@ -386,6 +386,7 @@ void drawMountains(){
 	GLint density = MOUNTAIN_MESH_DENSITY;
 
 	glPushMatrix();
+	// Set the drawing mode based on the flag
 	if (isDrawingSolid){
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
@@ -394,20 +395,20 @@ void drawMountains(){
 	}
 	glLineWidth(1);
 	
-
-	glTranslatef(-10, groundHeight, - 20);
-	glScalef(1,1,1);
+	// Move to a reasonable position
+	glTranslatef(-10, groundHeight, -40);
 	
-
-	glTranslatef(0,0,-20);
-	
+	// Draw the mountain texture if the flag is set
 	if (isShowingMountainTexture){
 		glShadeModel(GL_SMOOTH);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1104, 1280, 0, GL_RGB, GL_UNSIGNED_BYTE, mountainTexture);
 		glEnable(GL_TEXTURE_2D);
 	}
+	// Draw each mountain
 	for (m = 0; m < MOUNTAIN_COUNT; m++){
-		
+		// Translate based on which mountain we are designing so that the 
+		// mountains appear in different places. Also scale them differently
+		// so that we have different sizes
 		if (m == 0){
 			glTranslatef(-30, 0, - 80);	
 			glScalef(2,2,2);
@@ -424,11 +425,14 @@ void drawMountains(){
 			glTranslatef(120, 0, 0);
 			glScalef(2,4,2);
 		}
+
+		// Begin new quads and draw the mountain
 		glBegin(GL_QUADS);
 		for (i = 0; i < density-1; i++){
 			for (j = 0; j < density-1; j++){
 				color4f mountainWhite;
 				color4f mountainGreen;
+				// color the mountain as a function of height
 				mountainWhite[0] = (heightMap[m][i][j] / (.6 * density/2));
 				mountainWhite[1] = (heightMap[m][i][j]  / (.6 * density/2));
 				mountainWhite[2] = (heightMap[m][i][j]  / (.6 * density/2));
@@ -448,6 +452,8 @@ void drawMountains(){
 					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainGreen);
 					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainGreen);
 				}
+				// Set texture coords and make the mountains dance if the flag is set
+				// Repeat this for each of the four corners of each quad
 				glTexCoord2f(i,j);
 				if (isInDiscoMode){
 					if (sin(theta*.01) > 0){
@@ -539,6 +545,8 @@ void drawMountains(){
 			}
 		}
 		glEnd();
+
+		// Undo the scaling that was done to resize each individual mountain
 		if (m == 0){
 			glScalef(.5,.5,.5);
 		}
@@ -553,14 +561,18 @@ void drawMountains(){
 		}
 	}
 
+	// Turn off texture mode and pop the matrix so we dont affect future 
+	// transformations
 	glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
 }
 
-
+// A function to draw a 100 x 100 grid to use as a frame of
+// reference, and as described in the assignment
 void drawGrid(){
 	int i, j;
 	glPushMatrix();
+	// Set the draw mode based on the current state of the flag
 	if (isDrawingSolid){
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
@@ -569,13 +581,19 @@ void drawGrid(){
 	}
 	glLineWidth(1);
 	
+	// Move the grid so that it will appear centered and in
+	// front of the camera
 	glTranslatef(-GRID_SIZE*6.0f, 0.0f, -GRID_SIZE*6.0f);
 	for (i = 0; i < 10; i++){
 		for (j = 0; j < 10; j++){
+			// Draw each portion of the grid
 			glTranslatef(GRID_SIZE * 1.0f, 0.0f, 0.0f);
 			glBegin(GL_QUADS);
+			// Set materials
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, green);
 			glMaterialfv(GL_FRONT, GL_AMBIENT, green);
+
+			// Set vertices and normals
 			glNormal3f(0,0,0);
 			glVertex3f(0,0,0);
 			
@@ -589,21 +607,26 @@ void drawGrid(){
 			glVertex3f(0,0,GRID_SIZE);
 			glEnd();
 		}
+		// Translate so the next row is in the correct position
 		glTranslatef(-GRID_SIZE*10, 0, 0);
 		glTranslatef(0, 0, GRID_SIZE);
 	}
 	glPopMatrix();
 }
 
+
+// A function to draw the cylinder and disk. It will also texture them if 
+// the flag is set
 void drawCylinderAndDisk(){
+	// Create new quadric and set fog color
 	GLUquadricObj *quadric;
 	GLfloat fogColor[4] = {1,0,1,1};
 	
-
+	// Set the polygon mode and apply textures if
+	// the correct flag is set
 	if (isDrawingSolid == 0){
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
-
 	if (isDrawingSolid){
 		glMaterialfv(GL_FRONT, GL_EMISSION, white);
 		glEnable(GL_TEXTURE_2D);
@@ -614,10 +637,15 @@ void drawCylinderAndDisk(){
 	}
 	glPushMatrix();
 
+	// translate so the ocean is at "ground height" and rotate so that
+	// the cylinder appears correctly
 	glTranslatef(0, groundHeight, -100);
 	glRotatef(270, 1, 0, 0);
+
+	// Rotate the disc to get funky water effects
 	glRotatef(theta/4, 0, 0, 1);
 
+	// Set up and enable seas texture if flag is set
 	if (isDrawingSolid){
 		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 		glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
@@ -633,6 +661,7 @@ void drawCylinderAndDisk(){
 		gluQuadricTexture(quadric, GL_TRUE);
 	}
 	
+	// Draw the fog is the flag is true
 	if (isShowingFog){
 		glEnable(GL_FOG);
 		glFogfv(GL_FOG_COLOR, fogColor);
@@ -640,39 +669,50 @@ void drawCylinderAndDisk(){
 		glFogf(GL_FOG_DENSITY, 0.002);
 	}
 	
+	// draw the disk
 	gluDisk(quadric, .1, 300, 20, 20);
 
+	// disable fog
 	if (isShowingFog){
 		glDisable(GL_FOG);
 	}
 
+	// set up the texture for the sky
 	if (isDrawingSolid){
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 896, 385, 0, GL_RGB, GL_UNSIGNED_BYTE, skyTexture);
 	}
 	
-
+	// reinitialize the quadric object
 	quadric = gluNewQuadric();
 	
+	// Draw the cylinder, free the memory, and disable texture mode
 	gluCylinder(quadric, 200, 200, 150, 100, 100);
 	gluDeleteQuadric(quadric);
 	glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
+	// Disable emissive material
 	glMaterialfv(GL_FRONT, GL_EMISSION, black);
 
 	
 }
 
+// Function to draw the plane
 void drawPlane() {
+	// Rotate the plane based on the mouse position
 	float rotation = (currentPlaneAngle * 100 / glutGet(GLUT_WINDOW_WIDTH) * .6) - 30;
+	// Set correct polygon mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glPushMatrix();
+
+	// Move the plane to the contents of planePosition, and rotate it
+	// so that it faces the correct way in front of the camera
 	glTranslatef(planePosition[0], planePosition[1], planePosition[2]);
 	glRotatef(-turningAngle, 0, 1, 0);
 	glRotatef(270, 0, 1, 0);
 	
+	// Clamp rotation, and display the plane tilted to the correct side
 	if (rotation <= 30 && rotation >= -30){
-		glRotatef(-rotation , 1, 0, 0);
-		
+		glRotatef(-rotation , 1, 0, 0);	
 	}
 	else if (rotation > 30){
 		glRotatef(-30, 1, 0, 0);
@@ -681,6 +721,8 @@ void drawPlane() {
 		glRotatef(30, 1, 0, 0);
 	}
 
+	// Tilt the plane up or down if it is currently moving 
+	// up or down, and lerp it back to 0 if not
 	if (isMovingUp){
 		if (planeTilt > -15){
 			planeTilt = lerp(planeTilt, -15, .2);
@@ -698,24 +740,28 @@ void drawPlane() {
 		glRotatef(planeTilt, 0, 0, 1);
 	}
 	
+	// DO A BARREL ROLL
 	if (isBarrelRolling){
 		glRotatef(theta*15,1,0,0);
 	}
+
+	// draw the plane
 	glCallList(planeDisplayList);
 	
+	// Setup the propellers in front of the plane at the
+	// right positions and draw them
 	glPushMatrix();
 	glTranslatef(0,0,0);
 	glCallList(propellerDisplayList);
 	glPopMatrix();
 	
-	
+	// Draw the second propeller
 	glPushMatrix();
 	glTranslatef(0, 0, -.7);
 	glCallList(propellerDisplayList);
 	glPopMatrix();
 	
 	glPopMatrix();
-
 }
 
 void setUpPlane() {
