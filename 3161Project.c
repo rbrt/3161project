@@ -20,28 +20,26 @@
 #define VERTEX_COUNT 6763
 #define FACE_COUNT 3640
 #define PROP_FACE_COUNT 132
+#define MOUNTAIN_MESH_DENSITY 21
+#define MOUNTAIN_COUNT 4
 
 const GLint WINDOW_WIDTH = 800;
 const GLint WINDOW_HEIGHT = 600;
-const GLint PLANET_COUNT = 9; 
-const GLint PLANET_OFFSET = 10;
-const GLint SUN_SIZE = 20;
-const GLint STAR_COUNT = 3000;
 const GLint GRID_SIZE = 5;
-const GLint MOUNTAIN_MESH_DENSITY = 20;
-
-const GLfloat TWINKLE_SPEED = .1f;
 
 typedef GLfloat color4f[4];
 
 int imageWidth,
 	imageHeight;
 
+GLfloat heightMap[MOUNTAIN_COUNT][MOUNTAIN_MESH_DENSITY][MOUNTAIN_MESH_DENSITY];
+
 float moveSpeed = 0.01f,
 	  turningAngle = 0.0f,
 	  turningIncrement = 0,
 	  currentPlaneAngle = 0,
-	  planeTilt = 0;
+	  planeTilt = 0,
+	  groundHeight = -10;
 
 GLuint thePlane = 0;
 GLuint propeller = 0;
@@ -62,6 +60,7 @@ GLint isMovingUp = 0,
 	  isBarrelRolling = 0,
 	  isShowingTexture = 0,
 	  isShowingMountainTexture = 0,
+	  isShowingMountains = 0,
 	  isInDiscoMode = 0,
 
 	  faceCount = 0,
@@ -85,6 +84,7 @@ color4f green = {0.0f,1.0f,0.0f,1.0f};
 
 GLubyte *seaTexture;
 GLubyte *skyTexture;
+GLubyte *mountainTexture;
 
 typedef struct vector3f {
 	GLfloat x;
@@ -155,8 +155,6 @@ GLubyte *loadImage(char* filename){
 		exit(0);
 	}
 
-	printf("This is a PPM file\n");
-
 	fscanf(fileID, "%c", &tempChar);
 
 	while(tempChar == '#') 
@@ -171,8 +169,6 @@ GLubyte *loadImage(char* filename){
 	ungetc(tempChar, fileID); 
 
 	fscanf(fileID, "%d %d %d", &imageWidth, &imageHeight, &maxValue);
-
-	printf("%d rows  %d columns  max value= %d\n", imageHeight, imageWidth, maxValue);
 
 	totalPixels = imageWidth * imageHeight;
 
@@ -213,6 +209,9 @@ void loadTexture(){
 	imageHeight = 0;
 	imageWidth = 0;
 	skyTexture = loadImage("texturesPPM/sky08.ppm");
+	imageHeight = 0;
+	imageWidth = 0;
+	mountainTexture = loadImage("texturesPPM/mount03.ppm");
 
 }
 
@@ -255,106 +254,281 @@ void drawAxis(){
 	gluDeleteQuadric(quadric);
 }
 
-int hasGenerated = 0;
-GLfloat heightMap[MOUNTAIN_MESH_DENSITY][MOUNTAIN_MESH_DENSITY]; 
 
-void drawMountains(){
-	int i, j;
-	glPushMatrix();
-	//if (isDrawingSolid){
-	//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	//}
-	//else{
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//}
-	glLineWidth(1);
-	
-	GLfloat spacing = 1;
+void alterHeightMap(int mid, float alteration, int mapIndex){
+	int i = 0,
+		j = 0,
+		debug = 0;
+
 	GLint density = MOUNTAIN_MESH_DENSITY;
-	GLint maxHeight = 2*density;
-	GLint currentHeight = 1;
-	//glTranslatef(-spacing * 1.0f, 5.0f, -density*spacing);
 
-	if (hasGenerated == 0){
+	if (debug){
+		for (i = 0; i < density; i++){
+			for (int k = 0; k < density; k++){
+				printf("%1.2f ", heightMap[mapIndex][i][k]);
+			}
+			printf("\n");
+		}
 
+		printf("---------------\n");
+	}
+	
+	// left side
+	for (j = 0; j < density - 2*mid; j++){
+		heightMap[mapIndex][mid][mid + j] += sin(j)*.5*alteration;
+	}
+
+	// far side
+	for (j = 1; j < density - 2*mid; j++){
+		heightMap[mapIndex][mid + j][mid] += sin(j)*.7*alteration;
+	}
+
+	// right side
+	for (j = 1; j < density - 2*mid; j++){
+		heightMap[mapIndex][density-mid-1][mid + j] += cos(j)*.8*alteration;
+	}
+
+	// close side
+	for (j = 1; j < density - 2*mid-1; j++){
+		heightMap[mapIndex][mid + j][density-mid-1] += sin(j)*.8*alteration;
+	}
+
+	if (debug){
+		for (i = 0; i < density; i++){
+			for (int k = 0; k < density; k++){
+				printf("%1.2f ", heightMap[mapIndex][i][k]);
+			}
+			printf("\n");
+		}
+	}
+}
+
+void recursivelyDivideMountains(int division, int mapIndex){
+	if (division <= 0 ){
+		return;
+	}
+	else{
+		int index = MOUNTAIN_MESH_DENSITY / division;
+		alterHeightMap(index, division, mapIndex);
+		alterHeightMap(division, division, mapIndex);
+	}
+	recursivelyDivideMountains(division-1, mapIndex);
+
+}
+
+void initMountains(){
+	int k = 0,
+		i = 0,
+		j = 0,
+		density = MOUNTAIN_MESH_DENSITY;
+	for (k = 0; k < MOUNTAIN_COUNT; k++){
+		srand(glutGet(GLUT_ELAPSED_TIME));
 		for (i = 0; i < density; i++){
 			for (j = 0; j < density; j++){
 				if (j > density / 2){
-					heightMap[i][j] = density - j - 1;	
+					heightMap[k][i][j] = density - j - 1;	
 				}
 				else{
-					heightMap[i][j] = j;
+					heightMap[k][i][j] = j;
 				}
 				if (i < density / 2){
-					if (heightMap[i][j] > i){
-						heightMap[i][j] = i;
+					if (heightMap[k][i][j] > i){
+						heightMap[k][i][j] = i;
 					}
 				}
 				else{
-					if (heightMap[i][j] > density - i - 1){
-						heightMap[i][j] = density - i - 1;
+					if (heightMap[k][i][j] > density - i - 1){
+						heightMap[k][i][j] = density - i - 1;
 					}	
 				}
 				
 			}
 		}
+
+		heightMap[k][i][j] *= 1.5;
+
+		GLint randomBase = 10;
 		
-		/*
-		GLint randomHeight = rand() % maxHeight;
-		for (i = density/2; i < density; i++){
-			currentHeight = maxHeight;
-			for (j = density/2; j < density; j++){
-				heightMap[i][j] = maxHeight - rand() % currentHeight;
-				currentHeight *= 2;
-			}
-			currentHeight = maxHeight;
-			for (j = density/2 - 1; j >= 0; j--){
-				heightMap[i][j] =  maxHeight - rand() % currentHeight;
-				currentHeight *= 2;
-			}
-		}
-		for (i = density/2 - 1; i >= 0; i--){
-			currentHeight = maxHeight;
-			for (j = density/2; j < density; j++){
-				heightMap[i][j] = maxHeight - rand() % currentHeight;
-				currentHeight *= 2;
-			}
-			currentHeight = maxHeight;
-			for (j = density/2 - 1; j >= 0; j--){
-				heightMap[i][j] = maxHeight - rand() % currentHeight;
-				currentHeight *= 2;
-			}
-		}
-		*/
-		hasGenerated = 1;
+		GLint offset = density / 2;
+		GLint offsetInc = density / 2;
+		
+		GLint divisions = (int)floor(log2(density));
+		recursivelyDivideMountains(divisions, k);
 	}
+}
+
+void drawMountains(){
+	int i, j, m;
+	glPushMatrix();
+	if (isDrawingSolid){
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+	else{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
+	glLineWidth(1);
+	
+	GLfloat spacing = 1;
+	GLint density = MOUNTAIN_MESH_DENSITY;
+	
+	glTranslatef(-10, groundHeight, - 20);
+	glScalef(1,1,1);
+	
 
 	glTranslatef(0,0,-20);
 	
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, green);
-	glMaterialfv(GL_FRONT, GL_AMBIENT, green);
-	glBegin(GL_QUADS);
-	
+	if (isShowingMountainTexture){
+		glShadeModel(GL_SMOOTH);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1104, 1280, 0, GL_RGB, GL_UNSIGNED_BYTE, mountainTexture);
+		glEnable(GL_TEXTURE_2D);
+	}
+	for (m = 0; m < MOUNTAIN_COUNT; m++){
+		
+		if (m == 0){
+			glTranslatef(-30, 0, - 80);	
+			glScalef(2,2,2);
+		}
+		else if (m == 1){
+			glTranslatef(100, 0, 10);
+			glScalef(.5,4,.5);
+		}
+		else if (m == 2){
+			glTranslatef(-110, 0, 50);
+			glScalef(4,1,4);
+		}
+		else if (m == 3){
+			glTranslatef(120, 0, 0);
+			glScalef(2,4,2);
+		}
+		glBegin(GL_QUADS);
+		for (i = 0; i < density-1; i++){
+			for (j = 0; j < density-1; j++){
+				color4f mountainWhite;
+				mountainWhite[0] = (heightMap[m][i][j] / (.6 * density/2));
+				mountainWhite[1] = (heightMap[m][i][j]  / (.6 * density/2));
+				mountainWhite[2] = (heightMap[m][i][j]  / (.6 * density/2));
+				mountainWhite[3] = 1;
 
+				color4f mountainGreen;
+				mountainGreen[0] = 0;
+				mountainGreen[1] = (heightMap[m][i][j] / (.6 * density/2));
+				mountainGreen[2] = 0;
+				mountainGreen[3] = 1;
 
-	for (i = 0; i < density-1; i++){
-		for (j = 0; j < density-1; j++){
-			
-			glNormal3f(i,heightMap[i][j],j);
-			glVertex3f(i,heightMap[i][j],j);
-			
-			glNormal3f(i,heightMap[i][j+1],j+1);
-			glVertex3f(i,heightMap[i][j+1],j+1);
+				if (heightMap[m][i][j] > .6 * density/2){
+					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainWhite);
+					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainWhite);
+				}
+				else{
+					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainGreen);
+					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainGreen);
+				}
+				glTexCoord2f(i,j);
+				if (isInDiscoMode){
+					if (sin(theta*.01) > 0){
+						glNormal3f(i,sin(theta*.01)*heightMap[m][i][j],j);
+						glVertex3f(i,sin(theta*.01)*heightMap[m][i][j],j);
+					}
+					else{
+						glNormal3f(i,-sin(theta*.01)*heightMap[m][i][j],j);
+						glVertex3f(i,-sin(theta*.01)*heightMap[m][i][j],j);
+					}
+				}
+				else{
+					glNormal3f(i,heightMap[m][i][j],j);
+					glVertex3f(i,heightMap[m][i][j],j);	
+				}
+				if (heightMap[m][i][j+1] > .6 * density/2){
+					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainWhite);
+					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainWhite);
+				}
+				else{
+					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainGreen);
+					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainGreen);
+				}
+				glTexCoord2f(i,j+1);
+				if (isInDiscoMode){
+					if (sin(theta*.01) > 0){
+						glNormal3f(i,sin(theta*.01)*heightMap[m][i][j+1],j+1);
+						glVertex3f(i,sin(theta*.01)*heightMap[m][i][j+1],j+1);	
+					}
+					else{
+						glNormal3f(i,-sin(theta*.01)*heightMap[m][i][j+1],j+1);
+						glVertex3f(i,-sin(theta*.01)*heightMap[m][i][j+1],j+1);	
+					}
+				}
+				else{
+					glNormal3f(i,heightMap[m][i][j+1],j+1);
+					glVertex3f(i,heightMap[m][i][j+1],j+1);
+				}
 
-			glVertex3f(i+1,heightMap[i+1][j+1],j+1);
-			glNormal3f(i+1,heightMap[i+1][j+1],j+1);
+				if (heightMap[m][i+1][j+1] > .6 * density/2){
+					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainWhite);
+					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainWhite);
+				}
+				else{
+					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainGreen);
+					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainGreen);
+				}
+				glTexCoord2f(i+1,j+1);
 
-			glNormal3f(i+1,heightMap[i+1][j],j);
-			glVertex3f(i+1,heightMap[i+1][j],j);
+				if (isInDiscoMode){
+					if (sin(theta*.01) > 0){
+						glVertex3f(i+1,sin(theta*.01)*heightMap[m][i+1][j+1],j+1);
+						glNormal3f(i+1,sin(theta*.01)*heightMap[m][i+1][j+1],j+1);
+					}
+					else{
+						glVertex3f(i+1,-sin(theta*.01)*heightMap[m][i+1][j+1],j+1);
+						glNormal3f(i+1,-sin(theta*.01)*heightMap[m][i+1][j+1],j+1);
+					}
+				}
+				else{
+					glVertex3f(i+1,heightMap[m][i+1][j+1],j+1);
+					glNormal3f(i+1,heightMap[m][i+1][j+1],j+1);	
+				}
 
+				if (heightMap[m][i+1][j] > .6 * density/2){
+					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainWhite);
+					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainWhite);
+				}
+				else{
+					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainGreen);
+					glMaterialfv(GL_FRONT, GL_AMBIENT, mountainGreen);
+				}
+				glTexCoord2f(i+1,j);
+				if (isInDiscoMode){
+					if (sin(theta*.01) > 0){
+						glNormal3f(i+1,sin(theta*.01)*heightMap[m][i+1][j],j);
+						glVertex3f(i+1,sin(theta*.01)*heightMap[m][i+1][j],j);
+					}
+					else{
+						glNormal3f(i+1,-sin(theta*.01)*heightMap[m][i+1][j],j);
+						glVertex3f(i+1,-sin(theta*.01)*heightMap[m][i+1][j],j);
+					}
+				}
+				else{
+					glNormal3f(i+1,heightMap[m][i+1][j],j);
+					glVertex3f(i+1,heightMap[m][i+1][j],j);	
+				}
+
+			}
+		}
+		glEnd();
+		if (m == 0){
+			glScalef(.5,.5,.5);
+		}
+		else if (m == 1){
+			glScalef(2,.25,2);
+		}
+		else if (m == 2){
+			glScalef(.25,1,.25);
+		}
+		else if (m == 3){
+			glScalef(.5,.25,.5);
 		}
 	}
-	glEnd();
+
+	glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
 }
 
@@ -415,9 +589,9 @@ void drawCylinderAndDisk(){
 	}
 	glPushMatrix();
 
-	glTranslatef(0, -30, -100);
+	glTranslatef(0, groundHeight, -100);
 	glRotatef(270, 1, 0, 0);
-	glRotatef(theta/2, 0, 0, 1);
+	glRotatef(theta/4, 0, 0, 1);
 
 	if (isDrawingSolid){
 		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
@@ -624,25 +798,9 @@ void setUpPlane() {
 	fclose (fileStream);
 }
 
-void handleControls(){
-	if(isTurningRight){
-		turningAngle+=.1;
-		if (turningAngle > 60){
-			turningAngle = 60;
-		}
-	}
-	else if (isTurningLeft){
-		turningAngle-=.1;
-		if (turningAngle < -60){
-			turningAngle = -60;
-		}
-	}
-}
-
 void myDisplay(){
 	int grid = 0;
 	GLfloat position[] = {0, 50.0, 0.0, 1};
-	//handleControls();
 
 	glEnable(GL_LINE_SMOOTH | GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -686,14 +844,16 @@ void myDisplay(){
 	
 	drawPlane();
 
-	drawMountains();
+	if (isShowingMountains){
+		drawMountains();
+	}
 
 	if (isShowingTexture){
 		drawCylinderAndDisk();
 	}
 	else{
-		//drawAxis();
-		//drawGrid();
+		drawAxis();
+		drawGrid();
 	}
 	
 	glutSwapBuffers();
@@ -725,6 +885,11 @@ void keyboardDownFunction(char key, int x, int y){
 		case 'b': isShowingFog = isShowingFog ? 0 : 1;
 				   break;
 		case 'p': isBarrelRolling = isBarrelRolling ? 0 : 1;
+				  break;
+		case 't': isShowingMountains = isShowingMountains ? 0 : 1;
+				  break;
+		case 'm': isShowingMountainTexture = isShowingMountainTexture ? 0 : 1;
+				  break;
 		default: break;
 	}
 }
@@ -870,6 +1035,24 @@ void resizeFunction(int width, int height){
 	glMatrixMode(GL_MODELVIEW);
 }
 
+void printControls(){
+	printf("Controls:\n");
+	printf("b - toggle fog\n");
+	printf("w - wireframe/solid drawing\n");
+	printf("f - toggle fullscreen/windowed\n");
+	printf("s - toggle grid or sea/sky\n");
+	printf("p - enter BARREL ROLL mode\n");
+	printf("d - DANCING MOUNTAINS");
+	printf("m - toggle mountains\n");
+	printf("page up - increase speed\n");
+	printf("page down - decrease speed\n");
+	printf("up arrow - move up\n");
+	printf("down arrow - move down\n");
+	printf("mouse - steer plane\n");
+	printf("t - toggle mountain textures\n");
+
+}
+
 
 int main(int argc, char *argv[]){
 	GLfloat diffuse[] = {1, 1, 1, 1};
@@ -879,7 +1062,7 @@ int main(int argc, char *argv[]){
 
 	GLfloat globalAmbient[] = {.2, .2, .2, 1};	
 	srand(time(NULL));
-	
+	printControls();
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -915,6 +1098,8 @@ int main(int argc, char *argv[]){
 	glLightfv(GL_LIGHT0, GL_POSITION, position);
 	setUpPlane();
 	setUpProp();
+
+	initMountains();
 
 	loadTexture();
 
