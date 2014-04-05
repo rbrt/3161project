@@ -58,6 +58,7 @@ GLint isMovingUp = 0,
 	  isSlowingDown = 0,
 	  isShowingFog = 0,
 	  isFullscreen = 0,
+	  isBarrelRolling = 0,
 	  isShowingTexture = 0,
 	  isShowingMountainTexture = 0,
 	  isInDiscoMode = 0,
@@ -394,7 +395,9 @@ void drawPlane() {
 	}
 	
 	printf("rot:%f tilt:%f\n", rotation, planeTilt);
-	// barrel roll glRotatef(theta,1,0,0);
+	if (isBarrelRolling){
+		glRotatef(theta*15,1,0,0);
+	}
 	glCallList(thePlane);
 	
 	glPushMatrix();
@@ -614,6 +617,8 @@ void keyboardDownFunction(char key, int x, int y){
 		case 's': isShowingTexture = isShowingTexture ? 0 : 1;
 				  break;
 		case 'b': isShowingFog = isShowingFog ? 0 : 1;
+				   break;
+		case 'p': isBarrelRolling = isBarrelRolling ? 0 : 1;
 		default: break;
 	}
 }
