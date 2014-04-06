@@ -3,7 +3,7 @@ Basic Scene [3]:
 DONE
 
 Plane[6]:
-Propellers spin
+DONE
 
 Camera Control[5]:
 DONE
@@ -23,26 +23,9 @@ Land[8]:
 DONE
 
 
-"Additional Crap" [6]
+"Additional Stuff" [6]
+You limited the framerate
 You made Water all cool
 You made the plane tilt up and down when you move up and down
 You added a BARREL ROLL
-You made DANCING MOUNTAINS
-
-
-You can animate the mountains or something...
-Make the plane do a barrel roll
-DISCO MODE!!!!
-
-Control Dump:
-'b' toggle fog
-'w' wireframe/solid
-'f' fullscreen/windowed
-'s' toggle grid and sea/sky
-'p' do a barrel roll
-'m' toggles mountains
-page up: increase speed
-page down: decrease speed
-up arrow: move camera up
-down arrow: move camera down
-mouse: steer plane
+You made DANCING COLORFUL MOUNTAINS

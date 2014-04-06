@@ -435,13 +435,13 @@ void drawMountains(){
 				
 				// color everything all crazy is them ountains are dancing
 				if (isInDiscoMode){
-					mountainWhite[0] = (sin(heightMap[m][i][j] / (.6 * density/2)));
-					mountainWhite[1] = (cos(heightMap[m][i][j]  / (.6 * density/2)));
-					mountainWhite[2] = (-sin(heightMap[m][i][j]  / (.6 * density/2)));
+					mountainWhite[0] = (sin(theta));
+					mountainWhite[1] = (cos(theta));
+					mountainWhite[2] = (-sin(theta));
 					mountainWhite[3] = 1;
 
 					mountainGreen[0] = 0;
-					mountainGreen[1] = (sin(heightMap[m][i][j] / (.6 * density/2)));
+					mountainGreen[1] = (sin(theta));
 					mountainGreen[2] = 0;
 					mountainGreen[3] = 1;
 				}
@@ -643,7 +643,13 @@ void drawCylinderAndDisk(){
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
 	if (isDrawingSolid){
-		glMaterialfv(GL_FRONT, GL_EMISSION, white);
+		if (isInDiscoMode){
+			color4f lol = {sin(theta), -cos(theta), -sin(theta), 1};
+			glMaterialfv(GL_FRONT, GL_EMISSION, lol);
+		}
+		else{
+			glMaterialfv(GL_FRONT, GL_EMISSION, white);
+		}
 		glEnable(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
