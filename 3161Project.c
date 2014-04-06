@@ -432,17 +432,32 @@ void drawMountains(){
 			for (j = 0; j < density-1; j++){
 				color4f mountainWhite;
 				color4f mountainGreen;
-				// color the mountain as a function of height
-				mountainWhite[0] = (heightMap[m][i][j] / (.6 * density/2));
-				mountainWhite[1] = (heightMap[m][i][j]  / (.6 * density/2));
-				mountainWhite[2] = (heightMap[m][i][j]  / (.6 * density/2));
-				mountainWhite[3] = 1;
-
 				
-				mountainGreen[0] = 0;
-				mountainGreen[1] = (heightMap[m][i][j] / (.6 * density/2));
-				mountainGreen[2] = 0;
-				mountainGreen[3] = 1;
+				// color everything all crazy is them ountains are dancing
+				if (isInDiscoMode){
+					mountainWhite[0] = (sin(heightMap[m][i][j] / (.6 * density/2)));
+					mountainWhite[1] = (cos(heightMap[m][i][j]  / (.6 * density/2)));
+					mountainWhite[2] = (-sin(heightMap[m][i][j]  / (.6 * density/2)));
+					mountainWhite[3] = 1;
+
+					mountainGreen[0] = 0;
+					mountainGreen[1] = (sin(heightMap[m][i][j] / (.6 * density/2)));
+					mountainGreen[2] = 0;
+					mountainGreen[3] = 1;
+				}
+				else{
+					// color the mountain peaks as a function of height
+					mountainWhite[0] = (heightMap[m][i][j] / (.6 * density/2));
+					mountainWhite[1] = (heightMap[m][i][j]  / (.6 * density/2));
+					mountainWhite[2] = (heightMap[m][i][j]  / (.6 * density/2));
+					mountainWhite[3] = 1;
+
+					// color the mountain bodies as a function of height
+					mountainGreen[0] = 0;
+					mountainGreen[1] = (heightMap[m][i][j] / (.6 * density/2));
+					mountainGreen[2] = 0;
+					mountainGreen[3] = 1;
+				}
 
 				if (heightMap[m][i][j] > .6 * density/2){
 					glMaterialfv(GL_FRONT, GL_DIFFUSE, mountainWhite);
@@ -773,13 +788,12 @@ void loadPlane() {
 	int isFace = 0;
 	char first;
 	char *token;
+	char buffer[180];
 
 	FILE *file;
-	char buffer[180];
 	file = fopen("cessna.txt", "r");
 
-	if (file != NULL)
-	{
+	if (file != NULL){
 		// Create a new display list
 		planeDisplayList = glGenLists(1);
 	  	glNewList(planeDisplayList, GL_COMPILE);
@@ -851,8 +865,8 @@ void loadPlane() {
 							} 
 							else {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, blue);
-								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 								glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+								glMaterialfv(GL_FRONT, GL_AMBIENT, grey);
 							}
 							// Set normals and vertices, subtracting one because otherwise
 							// the model looks all janky and weird
@@ -887,20 +901,23 @@ void loadPropellers() {
 	char buffer[180];
 	file = fopen("propeller.txt", "r");
 
-	if (file != NULL)
-	{
+	if (file != NULL){
+		// create new display list for the propellers
 		propellerDisplayList = glGenLists(1);
 	  	glNewList(propellerDisplayList, GL_COMPILE);
 
-		while(fgets(buffer, 180, file) != NULL)
-		{
+		// Read in the contents of the file line by line
+		while(fgets(buffer, 180, file) != NULL){
 			first = ' ';
+			// Read in vertices
 			if(sscanf(buffer, "v %f %f %f ", &propellerVertices[vertexCount].x, &propellerVertices[vertexCount].y, &propellerVertices[vertexCount].z) == 3) {
 				vertexCount++;
 			} 
+			// Read in normals
 			else if(sscanf(buffer, "n %f %f %f ", &propellerNormals[normalCount].x, &propellerNormals[normalCount].y, &propellerNormals[normalCount].z) == 3) {
 				normalCount++;
 			} 
+			// Read in faces and component groups
 			else if(sscanf(buffer, "%c", &first) == 1) {
 				if(first == 'f') {
 					token = strtok(buffer, " ");
@@ -909,6 +926,7 @@ void loadPropellers() {
 					glBegin(GL_POLYGON);
 						glLineWidth(1);
 						while(token != NULL && token[0] != 10) {
+							// Set materials based on the colors outlined in the assignment
 							glMaterialf(GL_FRONT, GL_SHININESS, 100.0f);
 							if(groupingCount <= 0) {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
@@ -920,33 +938,44 @@ void loadPropellers() {
 								glMaterialfv(GL_FRONT, GL_DIFFUSE, yellow);
 								glMaterialfv(GL_FRONT, GL_AMBIENT, yellow);
 							}
+							// Set normals and vertices, subtracting one so that things don't look all wonky.
 							glNormal3f(propellerNormals[atoi(token)-1].x, propellerNormals[atoi(token)-1].y, propellerNormals[atoi(token)-1].z);
 							glVertex3f(propellerVertices[atoi(token)-1].x, propellerVertices[atoi(token)-1].y, propellerVertices[atoi(token)-1].z);
 							token = strtok(NULL, " ");
 						}
 					glEnd();
 				} 
+				// Advance the group counter if we are on a new component
 				else if (first == 'g') {
 					groupingCount++;
 				}
 			}
 		}
+		// End the current list
 		glEndList();
 	}
 	fclose (file);
 }
 
+
+// Main display function
 void myDisplay(){
-	int grid = 0;
+	// Position for the light. It's placed high so as to roughly be analogous to sunlight
 	GLfloat position[] = {0, 50.0, 0.0, 1};
 
+	// Enable smooth line drawing and depth testing
 	glEnable(GL_LINE_SMOOTH | GL_DEPTH_TEST);
+
+	// Clear the color and depth buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
+	// Keep track of our current turning angle to that the plane can be rotated to a reasonable angle
 	turningAngle += turningIncrement;
 
+	// Load the identity matrix to clear out any transformations from the previous display iteration
 	glLoadIdentity();
 
+	// Increase or decrease speed if the user is pressing the corresponding keys
 	if (isSpeedingUp){
 		moveSpeed += .01;
 		if (moveSpeed > .3){
@@ -960,6 +989,7 @@ void myDisplay(){
 		}
 	}
 
+	// Move the plane up or down if the user is pressing the corresponding keys
 	if (isMovingUp){
 		planePosition[1]+=.1;
 	}
@@ -967,25 +997,28 @@ void myDisplay(){
 		planePosition[1]-=.1;
 	}
 	
+	// move the plane based on the current angle and movement speed. The camera will look at this position to turn as well
 	planePosition[0] += sin(turningAngle * 3.1415/180.0f) * moveSpeed;
 	planePosition[2] -= cos(turningAngle * 3.1415/180.0f) * moveSpeed;
 
-
+	// Set the camera to be positioned slightly behind the plane (and at an angle if we are turning), and set the camera to look at the plane
 	gluLookAt(planePosition[0] + sin(turningAngle * (3.1415/180.0f)) * -5, planePosition[1] + 2, planePosition[2] - cos(turningAngle * (3.1415/180.0f)) * -5,
 			  planePosition[0], planePosition[1], planePosition[2],
 			  0, 1, 0);
 	
-
+	// Set the light source's position
 	glLightfv(GL_LIGHT0, GL_POSITION, position);
 
-
-	
+	// Draw the plane
 	drawPlane();
 
+	// Draw the mountains if the corresponding flag is set
 	if (isShowingMountains){
 		drawMountains();
 	}
 
+	// Draw the cylinder and disk (sea and sky) if the corresponding flag is set, otherwise
+	// draw the axis markers and grid
 	if (isShowingTexture){
 		drawCylinderAndDisk();
 	}
@@ -994,82 +1027,101 @@ void myDisplay(){
 		drawGrid();
 	}
 	
+	// Swap the buffers so that we are using double buffering
 	glutSwapBuffers();
 }
 
+// Function to switch between fullscreen and windowed drawing modes. fullscreen
+// is an integer flag which tells the function whether to enter fullscreen or
+// windowed mode
 void alternateFullscreenAndWindowed(int fullscreen){
 	if (isFullscreen){
+		// Position the window and set its width and height
 		glutPositionWindow(0,0);
         glutReshapeWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
 	}
 	else{
+		// Make the window fullscreen
 		glutFullScreen();
 	}
+	// Adjust the value of the fullscreen flag
 	isFullscreen = isFullscreen ? 0 : 1;
 }
 
+// function to handle all keyboard inputs
 void keyboardDownFunction(char key, int x, int y){
 	switch (key){
+		// Set dancing mountains
 		case 'd': isInDiscoMode = isInDiscoMode ? 0 : 1;
 				  break;
+		// Set solid or wire drawing
 		case 'w': isDrawingSolid = isDrawingSolid ? 0 : 1;
 				  break;
+		// Set fullscreen or windowed
 		case 'f': alternateFullscreenAndWindowed(isFullscreen);
 				  break;
+		// Quit
 		case 'q': exit(1);
 				  break;
+		// Show textures on land and sea, or dont
 		case 's': isShowingTexture = isShowingTexture ? 0 : 1;
 				  break;
+		// Show fog or dont
 		case 'b': isShowingFog = isShowingFog ? 0 : 1;
 				   break;
+		// DO A BARREL ROLL
 		case 'p': isBarrelRolling = isBarrelRolling ? 0 : 1;
 				  break;
+		// Show the mountains
 		case 't': isShowingMountains = isShowingMountains ? 0 : 1;
 				  break;
+		// Show the mountain texture
 		case 'm': isShowingMountainTexture = isShowingMountainTexture ? 0 : 1;
 				  break;
 		default: break;
 	}
 }
 
+// Function to handle keyboard input on the special keys
 void specialDownFunction(int key, int x, int y){
 	switch (key){
+		// Speed up
 		case GLUT_KEY_PAGE_UP: isSpeedingUp = 1;
 				  break;
-		case GLUT_KEY_LEFT: isTurningLeft = 1;
-				  break;
+		// Slow down
 		case GLUT_KEY_PAGE_DOWN: isSlowingDown = 1;
 				  break;
-		case GLUT_KEY_RIGHT: isTurningRight = 1;
-				  break;
+		// Move up
 		case GLUT_KEY_UP: isMovingUp = 1;
 				  break;
+		// Move down
 		case GLUT_KEY_DOWN: isMovingDown = 1;
 				  break;
 		default: break;
 	}
-
 }
 
+// Function to handle the event that special keys are released
 void specialUpFunction(int key, int x, int y){
 	switch (key){
+		// Stop speeding up
 		case GLUT_KEY_PAGE_UP: isSpeedingUp = 0;
 				  break;
-		case GLUT_KEY_LEFT: isTurningLeft = 0;
-				  break;
+		// Stop slowing down
 		case GLUT_KEY_PAGE_DOWN: isSlowingDown = 0;
 				  break;
-		case GLUT_KEY_RIGHT: isTurningRight = 0;
-				  break;
+		// Stop moving up
 		case GLUT_KEY_UP: isMovingUp = 0;
 				  break;
+		// Stop moving down
 		case GLUT_KEY_DOWN: isMovingDown = 0;
 				  break;
 		default: break;
 	}
 }
 
-
+// Timer function is used instead of idle so that we get a nice framerate regardless of the
+// machine the program is run on
 void timerFunction(){
 	theta++;
 
@@ -1077,32 +1129,36 @@ void timerFunction(){
 	glutTimerFunc(5, timerFunction, 0);
 }
 
+// Function to handle mouse input
 void mouseFunction(int x, int y){
 	int centerCoord;
 
+	// Set the current plane angle, this is used in other functions
 	currentPlaneAngle = x;
+	// Get the center coordinate to use as reference
 	centerCoord = glutGet(GLUT_WINDOW_WIDTH) / 2;
 
+	// Increment turning amout by the distance of the mouse from the center, in the appropriate direction
 	if (x < centerCoord){
 		turningIncrement = -(fabsf((centerCoord - x)) * 100 / glutGet(GLUT_WINDOW_WIDTH) / 2) * .0100;
 	}
 	else if (x > centerCoord){
 		turningIncrement = ((fabsf(centerCoord - x)) * 100 / glutGet(GLUT_WINDOW_WIDTH) / 2) * .0100;
 	}
-	else{
-
-	}
-
 }
 
+// Function to handle window resizing
 void resizeFunction(int width, int height){
+	// Readjust the viewport
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
+	// Reset the camera's perspective
 	glLoadIdentity();
 	gluPerspective(45, (float)width/(float)height, 1, 1000);
 	glMatrixMode(GL_MODELVIEW);
 }
 
+// Function to dump out all of the controls
 void printControls(){
 	printf("Controls:\n");
 	printf("b - toggle fog\n");
@@ -1110,7 +1166,7 @@ void printControls(){
 	printf("f - toggle fullscreen/windowed\n");
 	printf("s - toggle grid or sea/sky\n");
 	printf("p - enter BARREL ROLL mode\n");
-	printf("d - DANCING MOUNTAINS");
+	printf("d - DANCING MOUNTAINS\n");
 	printf("m - toggle mountains\n");
 	printf("page up - increase speed\n");
 	printf("page down - decrease speed\n");
@@ -1118,60 +1174,72 @@ void printControls(){
 	printf("down arrow - move down\n");
 	printf("mouse - steer plane\n");
 	printf("t - toggle mountain textures\n");
-
 }
 
-
+// Main function performs all initialization and starts up the main drawing loop
 int main(int argc, char *argv[]){
+	// Set starting values for the light source
 	GLfloat diffuse[] = {1, 1, 1, 1};
 	GLfloat ambient[] = {1, 1, 1, 1};
 	GLfloat specular[] = {1, 1, 1, 1};
-		GLfloat position[] = {0, 10.0, 0.0, 1};
-
+	GLfloat position[] = {0, 10.0, 0.0, 1};
 	GLfloat globalAmbient[] = {.2, .2, .2, 1};	
+
+	// Seed random
 	srand(time(NULL));
+	
+	// Display controls
 	printControls();
+	
+	// Init glut and set window size
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutCreateWindow("Flight");
+	
+	// Set callback functions for display and input
 	glutDisplayFunc(myDisplay);
-
 	glutKeyboardFunc(keyboardDownFunction);
 	glutSpecialFunc(specialDownFunction);
 	glutSpecialUpFunc(specialUpFunction);
 	glutReshapeFunc(resizeFunction);
 	glutPassiveMotionFunc(mouseFunction);
 
+	// Set the clear color
 	glClearColor(0, 0, 0, 1);
 
+	// Set the camera's perspective
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(45, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, 1, 1000);
 	glMatrixMode(GL_MODELVIEW);
 
-	
-	glEnable(GL_LIGHTING); 
+	// Enable necessary flags for lighting and set the correct shade model
+	glEnable(GL_LIGHTING);
 	glEnable(GL_NORMALIZE);
 	glEnable(GL_LIGHT0);
 	glShadeModel(GL_SMOOTH);
 
+	// Set the lighting model and assign the set values for ambient, diffuse, specular, and position
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbient);
-	
 	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
-	
-
 	glLightfv(GL_LIGHT0, GL_POSITION, position);
+	
+	// Load the plane and propeller model data
 	loadPlane();
 	loadPropellers();
 
+	// Initialize the mountains
 	initMountains();
 
+	// Load the textures
 	loadTexture();
 
+	// Set the timer function for smooth framerate
 	glutTimerFunc(100, timerFunction, 0);
 	
+	// Begin the main loop
 	glutMainLoop();
 }
